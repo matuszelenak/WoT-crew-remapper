@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>World of Tanks Crew voice remapper</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+
+</head>
+<body class="table-dark">
+<div class="d-flex justify-content-center">
+
+    <form method="post">
+        {% for tankman in tankmen %}
+        <div class="row">
+            <div class="col-md-6">
+                <img src="static/tankmen/{{ tankman.icon }}"/>
+            </div>
+            <div class="col-md-6"></div>
+        </div>
+        {% endfor %}
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <button type="submit" class="btn btn-lg btn-success">Create a modpack</button>
+            </div>
+        </div>
+    </form>
+</div>
+<br>
+<footer class="footer">
+    <div class="container" style="text-align: center">
+        <span class="text-muted">
+            Source code available <a href="https://github.com/matuszelenak/WoT-style-unlocker">here</a>.
+        </span>
+    </div>
+</footer>
+</body>
+</html>
