@@ -1,0 +1,4 @@
+polib~=1.1.0
+Flask~=1.1.2
+lxml~=4.6.2
+whitenoise~=5.2.0
