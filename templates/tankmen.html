@@ -10,20 +10,50 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+    <script type="text/javascript">
+        const icons = {}
+        {% for tankman in tankmen %}
+        icons["{{tankman.slug}}"] = "{{tankman.icon}}"{% endfor %}
 
+        function onSelectChange(slug) {
+            e = document.getElementById(slug)
+            changeTo = e.options[e.selectedIndex].value
+            if (changeTo === "") {
+                document.getElementById(slug + "_change_image").src = "static/tankmen/" + icons[slug];
+            } else {
+                document.getElementById(slug + "_change_image").src = "static/tankmen/" + icons[changeTo];
+            }
+        }
+
+        $('select').selectpicker();
+    </script>
 </head>
 <body class="table-dark">
 <div class="d-flex justify-content-center">
 
     <form method="post">
-        {% for tankman in tankmen %}
-        <div class="row">
-            <div class="col-md-6">
-                <img src="static/tankmen/{{ tankman.icon }}"/>
-            </div>
-            <div class="col-md-6"></div>
-        </div>
-        {% endfor %}
+        <table class="table table-striped table-responsive table-dark">
+            <tbody>
+                {% for tankman in tankmen %}
+                    <tr>
+                        <td><img src="static/tankmen/{{ tankman.icon }}"/></td>
+                        <td>{{ tankman.first_name }} {{ tankman.last_name }}</td>
+                        <td>Change to: </td>
+                        <td>
+                            <select id="{{tankman.slug}}" name="{{tankman.slug}}" onchange="onSelectChange('{{ tankman.slug }}')">
+                                <option value="">Don't change</option>
+                                {% for change_to in tankmen %}
+                                    {% if change_to.slug != tankman.slug %}
+                                    <option value="{{change_to.slug}}">{{change_to.first_name}} {{change_to.last_name}}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><img id="{{tankman.slug}}_change_image" src="static/tankmen/{{ tankman.icon }}"/></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         <div class="row">
             <div class="col-md-12 text-center">
                 <button type="submit" class="btn btn-lg btn-success">Create a modpack</button>
@@ -35,7 +65,7 @@
 <footer class="footer">
     <div class="container" style="text-align: center">
         <span class="text-muted">
-            Source code available <a href="https://github.com/matuszelenak/WoT-style-unlocker">here</a>.
+            Source code available <a href="https://github.com/matuszelenak/WoT-crew-remapper">here</a>.
         </span>
     </div>
 </footer>

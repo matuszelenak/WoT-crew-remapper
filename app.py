@@ -1,16 +1,16 @@
 import os
 import re
+import zipfile
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Generator, Tuple, Dict, Set
+from io import BytesIO
+from typing import Generator, Dict, Set
 
 import polib as polib
 from flask import Flask, render_template, request, send_file
-from whitenoise import WhiteNoise
-import zipfile
-from io import BytesIO
-
 from lxml import etree
 from lxml.etree import Element
+from whitenoise import WhiteNoise
 
 BASE_DIR = os.path.dirname(__file__)
 
@@ -52,6 +52,15 @@ def load_special_voice_tags() -> Generator[str, None, None]:
     for tank_man in root.find('voiceover'):
         yield tank_man.find('tag').text.strip()
 
+def create_zip_file(files: Dict[str, str]):
+    memory_file = BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_STORED) as archive:
+        for filename, content in files.items():
+            archive.writestr(filename, content)
+
+    memory_file.seek(0)
+    return send_file(memory_file, attachment_filename='crew_remap.wotmod', as_attachment=True)
+
 
 @dataclass
 class SubstitutionData:
@@ -92,6 +101,9 @@ class TankStylesApp(Flask):
 
             for tankman in root.find('premiumGroups'):
                 slug = tankman.tag
+                if slug.find('race') != -1:
+                    continue
+
                 tags = set(getattr(tankman.find('tags'), 'text', '').strip().split(' '))
                 voice_tag = next(iter(tags & voice_tags), None)
                 if not voice_tag:
@@ -100,18 +112,20 @@ class TankStylesApp(Flask):
                 first_name = next(iter(tankman.find('firstNames'))).text
                 try:
                     second_name = next(iter(tankman.find('lastNames'))).text
-                except:
-                    second_name = None
+                except (StopIteration, AttributeError):
+                    second_name = ""
                 icon = next(iter(tankman.find('icons'))).text
                 if slug not in self.tankmen:
+                    last_name = self.g_mo_cache.get_name(second_name.strip())
+                    if last_name == '?empty?':
+                        last_name = ""
                     self.tankmen[slug] = Tankman(
                         self.g_mo_cache.get_name(first_name.strip()),
-                        self.g_mo_cache.get_name(second_name.strip()),
+                        last_name,
                         icon.strip(),
                         slug,
                         voice_tag
                     )
-                    print(icon)
 
                 self.tankmen[slug].nation_data[nation] = SubstitutionData(
                     first_name,
@@ -133,6 +147,21 @@ class TankStylesApp(Flask):
 
         return etree.tostring(xml).decode()
 
+    def create_modpack(self, form):
+        nation_substitutions = defaultdict(dict)
+        for source_slug in [key for key, value in form.items() if key in app.tankmen and value != ""]:
+            target_slug = form.get(source_slug)
+            if target_slug not in self.tankmen:
+                continue
+
+            for nation in self.tankmen[source_slug].nation_data.keys():
+                nation_substitutions[nation][source_slug] = target_slug
+
+        return create_zip_file(
+            {f'res/scripts/item_defs/tankmen/{nation}.xml': self.substitute(nation, substitutions)
+             for nation, substitutions in nation_substitutions.items()}
+        )
+
 
 app = TankStylesApp(__name__)
 app.wsgi_app = WhiteNoise(
@@ -144,18 +173,9 @@ app.wsgi_app = WhiteNoise(
 
 @app.route('/', methods=['GET', 'POST'])
 def tankmen():
-    # if request.method == 'POST':
-    #     files = get_styled_files(request.form)
-    #     if files:
-    #         return create_zip_file(files)
-    #
-    # sorted_vehicles = sorted(app.vehicles.values(), key=lambda vehicle: (vehicle['nation'], vehicle['name']))
-    # by_nation = group_by_attribute(sorted_vehicles, lambda vehicle: vehicle['nation'])
-    # in_nation_sorted = {
-    #     nation: sorted(vehicles, key=lambda vehicle: (vehicle['class'], -vehicle['tier'], vehicle['name']))
-    #     for nation, vehicles in by_nation.items()
-    # }
-    return render_template('tankmen.html', tankmen=app.tankmen.values())
+    if request.method == 'POST':
+        return app.create_modpack(request.form)
+    return render_template('tankmen.html', tankmen=sorted(app.tankmen.values(), key=lambda x: f'{x.first_name}{x.last_name}'))
 
 
 if __name__ == "__main__":
